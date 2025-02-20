@@ -2,19 +2,21 @@
 
 namespace App\Repositories;
 
-class ProductRepository
+use App\Models\Product;
+
+class ProductRepository extends BaseRepository
 {
     protected $model;
 
-    public function __construct($model)
+    public function __construct(Product $model)
     {
         $this->model = $model;
     }
 
     public function all(array $options = [])
     {
-        $perPage = $options['per_page'] ?? 10;
-        $page = $options['page'] ?? 1;
+        $perPage = $this->resolvePerPage($options);
+        $page = $this->resolvePage($options);
         $sortBy = $options['sort_by'] ?? 'created_at';
         $sortDirection = $options['sort_direction'] ?? 'desc';
 
@@ -62,13 +64,27 @@ class ProductRepository
             $query->where('category_id', $categoryId);
         }
 
-        $perPage = $options['per_page'] ?? 10;
-        $page = $options['page'] ?? 1;
+        $perPage = $this->resolvePerPage($options);
+        $page = $this->resolvePage($options);
         $sortBy = $options['sort_by'] ?? 'created_at';
         $sortDirection = $options['sort_direction'] ?? 'desc';
 
         return $query->orderBy($sortBy, $sortDirection)
             ->paginate($perPage, ['*'], 'page', $page)
             ->appends($options);
+    }
+
+    public function getPaginationStats()
+    {
+        $perPage = $this->resolvePerPage([]);
+        $page = $this->resolvePage([]);
+        $total = $this->model->count();
+
+        return [
+            'total' => $total,
+            'per_page' => $perPage,
+            'current_page' => $page,
+            'last_page' => ceil($total / $perPage),
+        ];
     }
 }

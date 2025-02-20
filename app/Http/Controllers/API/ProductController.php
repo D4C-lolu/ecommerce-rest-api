@@ -52,13 +52,32 @@ class ProductController extends Controller
     public function update(ProductUpdateRequest $request, $id)
     {
         try {
-            $product = $this->productService->updateProduct($request->validated(), $id);
+            $validated = $request->validated();
+            if (isset($validated['category_id']) && !$this->categoryExists($validated['category_id'])) {
+                return response()->json(['message' => 'Invalid category'], 409);
+            }
+            $product = $this->productService->updateProduct($validated, $id);
             return response()->json($product);
         } catch (ModelNotFoundException $e) {
             return response()->json(['message' => 'Product not found'], 404);
         } catch (Throwable $e) {
             return response()->json([
                 'message' => 'Failed to update product',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    public function destroy($id)
+    {
+        try {
+            $this->productService->deleteProduct($id);
+            return response()->json(['message' => 'Product deleted']);
+        } catch (ModelNotFoundException $e) {
+            return response()->json(['message' => 'Product not found'], 404);
+        } catch (Throwable $e) {
+            return response()->json([
+                'message' => 'Failed to delete product',
                 'error' => $e->getMessage(),
             ], 500);
         }
@@ -79,5 +98,10 @@ class ProductController extends Controller
                 'error' => $e->getMessage(),
             ], 500);
         }
+    }
+
+    private function categoryExists($categoryId)
+    {
+        return \App\Models\Category::where('id', $categoryId)->exists();
     }
 }

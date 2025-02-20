@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use Tests\TestCase;
+use Illuminate\Support\Facades\Mail;
 use App\Models\User;
 use App\Models\Product;
 use App\Models\Category;
@@ -28,6 +29,9 @@ class AuthControllerTest extends TestCase
 
         $response = $this->postJson('/api/register', $userData);
 
+        if ($response->status() !== 201) {
+            echo "Response Body: " . $response->content() . PHP_EOL;
+        }
         $response->assertStatus(201)
                 ->assertJsonStructure(['token']);
         
@@ -37,26 +41,26 @@ class AuthControllerTest extends TestCase
         ]);
     }
 
+
     public function test_user_can_reset_password()
     {
-        $user = User::factory()->create();
-        
-        // Request password reset
-        $this->postJson('/api/password/reset', [
-            'email' => $user->email
-        ])->assertStatus(200);
+    Mail::fake(); 
+    $user = User::factory()->create();
+    
+    $response = $this->postJson('/api/password/reset', [
+        'email' => $user->email
+    ]);
+    
+    $response->assertStatus(200);
 
-        // Get the reset token
-        $token = Password::createToken($user);
-        
-        // Reset password
-        $response = $this->postJson('/api/password/reset/confirm', [
-            'email' => $user->email,
-            'token' => $token,
-            'password' => 'newpassword123',
-            'password_confirmation' => 'newpassword123'
-        ]);
-
-        $response->assertStatus(200);
+    $token = Password::createToken($user);
+    
+    $response = $this->postJson('/api/password/reset/confirm', [
+        'email' => $user->email,
+        'token' => $token,
+        'password' => 'newpassword123',
+        'password_confirmation' => 'newpassword123'
+    ]);
+    $response->assertStatus(200);
     }
 }
