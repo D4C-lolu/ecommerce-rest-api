@@ -35,47 +35,6 @@ class ProductService
         });
     }
 
-    public function getProductById($id)
-    {
-        $cacheKey = "{$this->cachePrefix}find_{$id}";
-        return $this->cacheService->remember($cacheKey, function () use ($id) {
-            return $this->productRepository->find($id);
-        });
-    }
-
-    public function createProduct(array $data)
-    {
-        $this->validateCategory($data['category_id'] ?? null);
-        $product = $this->productRepository->create($data);
-        $this->cacheService->forget($this->generateCacheKey('all'));
-        $this->cacheService->forget($this->generateCacheKey('search'));
-
-        return $product;
-    }
-
-    public function updateProduct(array $data, $id)
-    {
-        $this->validateCategory($data['category_id'] ?? null);
-        $product = $this->productRepository->update($data, $id);
-        
-        $this->cacheService->forget("{$this->cachePrefix}find_{$id}");
-        $this->cacheService->forget($this->generateCacheKey('all'));
-        $this->cacheService->forget($this->generateCacheKey('search'));
-
-        return $product;
-    }
-
-    public function deleteProduct($id)
-    {
-        $this->productRepository->delete($id);
-
-        $this->cacheService->forget("{$this->cachePrefix}find_{$id}");
-        $this->cacheService->forget($this->generateCacheKey('all'));
-        $this->cacheService->forget($this->generateCacheKey('search'));
-
-        return true; // Return a value for the controller response
-    }
-
     public function searchProducts($search = null, $categoryId = null, array $options = [])
     {
         $this->validateCategory($categoryId);
@@ -93,6 +52,46 @@ class ProductService
             ];
         });
     }
+
+    public function createProduct(array $data)
+    {
+        $this->validateCategory($data['category_id'] ?? null);
+        $product = $this->productRepository->create($data);
+        $this->cacheService->forget($this->generateCacheKey('all'));
+        $this->cacheService->forget($this->generateCacheKey('search'));
+        return $product;
+    }
+
+    public function updateProduct(array $data, $id)
+    {
+        $this->validateCategory($data['category_id'] ?? null);
+        $product = $this->productRepository->update($data, $id);
+        $this->cacheService->forget("{$this->cachePrefix}find_{$id}");
+        $this->cacheService->forget($this->generateCacheKey('all'));
+        $this->cacheService->forget($this->generateCacheKey('search'));
+        return $product;
+    }
+
+    public function getProductById($id)
+    {
+        $cacheKey = "{$this->cachePrefix}find_{$id}";
+        return $this->cacheService->remember($cacheKey, function () use ($id) {
+            return $this->productRepository->find($id);
+        });
+    }
+
+
+    public function deleteProduct($id)
+    {
+        $this->productRepository->delete($id);
+
+        $this->cacheService->forget("{$this->cachePrefix}find_{$id}");
+        $this->cacheService->forget($this->generateCacheKey('all'));
+        $this->cacheService->forget($this->generateCacheKey('search'));
+
+        return true; 
+    }
+
 
     protected function generateCacheKey($prefix, $options = [], $additionalData = [])
     {

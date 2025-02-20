@@ -8,7 +8,6 @@ use App\Models\Product;
 use App\Models\Category;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
-use Illuminate\Support\Facades\Hash;
 use Tymon\JWTAuth\Facades\JWTAuth;
 use Illuminate\Support\Str;
 
@@ -40,11 +39,7 @@ class ProductControllerTest extends TestCase
     {
         Product::factory()->count(5)->create(['category_id' => $this->category->id]);
 
-        $response = $this->getJson('/api/products', $this->withAuthHeaders());
-
-        if ($response->status() !== 200) {
-            echo "Response Body: " . $response->content() . PHP_EOL;
-        }
+        $response = $this->getJson('/api/products', $this->withAuthHeaders()); 
 
         $response->assertStatus(200)
                 ->assertJsonStructure([
@@ -52,7 +47,10 @@ class ProductControllerTest extends TestCase
                         '*' => [
                             'id',
                             'name',
-                            'description', 
+                            'slug',
+                            'description',
+                            'price',
+                            'stock_quantity',
                             'category'
                         ]
                     ],
@@ -70,31 +68,27 @@ class ProductControllerTest extends TestCase
         $productData = [
             'name' => $this->faker->words(3, true),
             'description' => $this->faker->paragraph,
-            'stock' => 100,
-            'status' => 'active',
-            'sku' => $this->faker->unique()->numerify('SKU-#####'), 
+            'price' => $this->faker->randomFloat(2, 10, 100),
+            'stock_quantity' => 100,
             'category_id' => $this->category->id,
         ];
 
         $response = $this->postJson('/api/products', $productData, $this->withAuthHeaders());
-
-        if ($response->status() !== 201) {
-            echo "Response Body: " . $response->content() . PHP_EOL;
-        }
-
+        
         $response->assertStatus(201)
                 ->assertJsonStructure([
                     'id',
                     'name',
+                    'slug',
                     'description',
-                    'stock', 
-                    'status',
-                    'sku',
-                    'category'
+                    'price',
+                    'stock_quantity',
+                    'category_id'
                 ]);
 
         $this->assertDatabaseHas('products', [
             'name' => $productData['name'],
+            'slug' => Str::slug($productData['name']),
             'category_id' => $this->category->id
         ]);
     }
@@ -103,15 +97,15 @@ class ProductControllerTest extends TestCase
     {
         $product = Product::factory()->create([
             'category_id' => $this->category->id,
-            'stock' => 10,
-            'status' => 'active',
-            'sku' => 'SKU-12345'
+            'price' => 50.00,
+            'stock_quantity' => 10
         ]);
         
         $updateData = [
             'name' => 'Updated Product Name',
-            'stock' => 50,
-            'status' => 'inactive'
+            'price' => 199.99,
+            'stock_quantity' => 50,
+            'category_id' => $this->category->id
         ];
 
         $response = $this->putJson(
@@ -120,15 +114,12 @@ class ProductControllerTest extends TestCase
             $this->withAuthHeaders()
         );
 
-        if ($response->status() !== 200) {
-            echo "Response Body: " . $response->content() . PHP_EOL;
-        }
-
         $response->assertStatus(200)
                 ->assertJson([
                     'name' => 'Updated Product Name',
-                    'stock' => 50,
-                    'status' => 'inactive'
+                    'slug' => 'updated-product-name',
+                    'price' => 199.99,
+                    'stock_quantity' => 50
                 ]);
     }
 
@@ -142,12 +133,9 @@ class ProductControllerTest extends TestCase
             $this->withAuthHeaders()
         );
 
-        if ($response->status() !== 200) {
-            echo "Response Body: " . $response->content() . PHP_EOL;
-        }
 
         $response->assertStatus(200)
-                ->assertJson(['message' => 'Product deleted']); 
+                ->assertJson(['message' => 'Product deleted']);
         
         $this->assertSoftDeleted('products', ['id' => $product->id]);
     }
@@ -158,15 +146,11 @@ class ProductControllerTest extends TestCase
 
         $response = $this->putJson(
             "/api/products/{$product->id}",
-            ['category_id' => 999], 
+            ['category_id' => 999], // Non-existent category
             $this->withAuthHeaders()
         );
-
-        if ($response->status() !== 409) {
-            echo "Response Body: " . $response->content() . PHP_EOL;
-        }
-
-        $response->assertStatus(409); 
+    
+        $response->assertStatus(422);  
     }
 
     public function test_pagination_and_sorting()
@@ -179,28 +163,22 @@ class ProductControllerTest extends TestCase
             'category_id' => $this->category->id,
             'name' => 'ZZZ Product'
         ]);
-
+    
         $response = $this->getJson(
             '/api/products?sort_by=name&sort_direction=desc&per_page=1',
             $this->withAuthHeaders()
         );
-
-        if ($response->status() !== 200) {
-            echo "Response Body: " . $response->content() . PHP_EOL;
-        }
-
+    
         $response->assertStatus(200)
-                ->assertJsonStructure([
-                    'data',
-                    'meta' => [
-                        'total',
-                        'per_page',
-                        'current_page',
-                        'last_page'
-                    ]
-                ])
-                ->assertJsonPath('data.0.name', 'ZZZ Product')
-                ->assertJsonPath('meta.per_page', 1);
+                 ->assertJsonStructure([
+                     'data',
+                     'total', 
+                     'per_page',
+                     'current_page',
+                     'last_page'
+                 ])
+                 ->assertJsonPath('data.0.name', 'ZZZ Product')
+                 ->assertJsonPath('per_page', 1); 
     }
 
     public function test_search_functionality()
@@ -215,9 +193,9 @@ class ProductControllerTest extends TestCase
             $this->withAuthHeaders()
         );
 
-        if ($response->status() !== 200) {
-            echo "Response Body: " . $response->content() . PHP_EOL;
-        }
+        
+        //echo "Response Body (search): " . $response->content() . PHP_EOL;
+        
 
         $response->assertStatus(200)
                 ->assertJsonCount(1, 'data')
