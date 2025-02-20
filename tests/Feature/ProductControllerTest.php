@@ -193,10 +193,6 @@ class ProductControllerTest extends TestCase
             $this->withAuthHeaders()
         );
 
-        
-        //echo "Response Body (search): " . $response->content() . PHP_EOL;
-        
-
         $response->assertStatus(200)
                 ->assertJsonCount(1, 'data')
                 ->assertJsonPath('data.0.name', 'Unique Searchable Product');
