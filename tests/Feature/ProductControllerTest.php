@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Hash;
 use Tymon\JWTAuth\Facades\JWTAuth;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
+use App\Http\Controllers\API\ProductController;
 
 class ProductControllerTest extends TestCase
 {

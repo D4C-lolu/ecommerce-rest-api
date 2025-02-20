@@ -1,11 +1,13 @@
+<?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\API;
 
 use App\Http\Requests\{
     ProductStoreRequest,
     ProductUpdateRequest,
     ProductSearchRequest
 };
+use App\Http\Controllers\Controller;
 use App\Services\ProductService;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Database\QueryException;
